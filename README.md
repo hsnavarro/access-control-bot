@@ -26,7 +26,7 @@ $ cd access-control-bot
 
 4 - Python and database setup
 
-Run virtualenv
+- Run virtualenv
 
 ```
 $ python3 -m venv venv
@@ -35,13 +35,13 @@ $ source venv/bin/activate
 
 (To deactivate virtualenv just run `deactivate`)
 
-## Install requirements
+- Install requirements
 
 ```
 $ pip install -r requirements.txt
 ```
 
-## Setup database
+- Setup database
 
 ```
 $ bash setup.sh
