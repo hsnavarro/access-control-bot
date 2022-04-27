@@ -15,7 +15,7 @@ Telegram Bot to manage RFID access control
 
 2 - Download dependencies (Ubuntu 20.04 LTS)
 ```
-sudo apt install python3 python3-pip python3-venv
+sudo apt install python3 python3-pip python3-venv sqlite3
 ```
 
 3 - Cloning repository
