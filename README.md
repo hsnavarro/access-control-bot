@@ -15,13 +15,13 @@ Telegram Bot to manage RFID access control
 
 2 - Download dependencies (Ubuntu 20.04 LTS)
 ```
-$ sudo apt install python3 python3-pip python3-venv
+sudo apt install python3 python3-pip python3-venv
 ```
 
 3 - Cloning repository
 ```
-$ git clone <this-repo>
-$ cd access-control-bot
+git clone <this-repo>
+cd access-control-bot
 ```
 
 4 - Python and database setup
@@ -29,8 +29,8 @@ $ cd access-control-bot
 - Run virtualenv
 
 ```
-$ python3 -m venv venv
-$ source venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 ```
 
 (To deactivate virtualenv just run `deactivate`)
@@ -38,13 +38,13 @@ $ source venv/bin/activate
 - Install requirements
 
 ```
-$ pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 - Setup database
 
 ```
-$ bash setup.sh
+bash setup.sh
 ```
 
 5 - Configure Token
@@ -52,10 +52,10 @@ $ bash setup.sh
 Create a file `.ENV` to store your token
 
 ```
-$ echo "export TOKEN=<YOUR_TOKEN_HERE>" > .ENV
+echo "export TOKEN=<YOUR_TOKEN_HERE>" > .ENV
 ```
 
 6 - Run the bot
 ```
-$ sudo ./run.sh
+sudo ./run.sh
 ```
