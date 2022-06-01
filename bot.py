@@ -12,10 +12,10 @@ updater = Updater(token=token)
 
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-#Acess dispatcher
+# Access dispatcher
 dispatcher = updater.dispatcher
 
-#Logging
+# Logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Access Class
@@ -89,6 +89,40 @@ def is_between(l_hours, l_minutes, r_hours, r_minutes, hours, minutes):
   
   return False
 
+def log(rfid, date_time, is_authorized):
+  log_db = db['log']
+  log_db.upsert(
+    dict(
+      RFID = rfid,
+      date_time = date_time,
+      is_authorized = is_authorized,
+    ),
+    ['RFID', 'date_time']
+  )
+
+@restricted
+def show_logs(bot, update):
+  log_db = db['log']
+  logs = list(log_db.all())
+
+  if len(logs) == 0:
+    bot.send_message(
+      chat_id = update.message.chat_id,
+      text="Não há registros")
+  else:
+    msg = "*Logs*\n"
+    for log in logs:
+      msg += "RFID: " + str(log['RFID']) + " " + log['date_time'] + " Acesso "
+      if log['is_authorized']: msg += "Autorizado\n"
+      else: msg += "Negado\n"
+
+    bot.send_message(
+      chat_id = update.message.chat_id,
+      text = msg,
+      parse_mode = ParseMode.MARKDOWN,
+      disable_web_page_preview=True
+    )
+
 def get_access_internal(rfid):
   date = datetime.datetime.now()
   weekday = WEEKDAYS[date.weekday()]
@@ -111,9 +145,55 @@ def get_access_internal(rfid):
   if is_between(start_time_hours, start_time_minutes,
                 end_time_hours, end_time_minutes,
                 hours, minutes):
+    log(rfid, date, True)
     return True
 
+  log(rfid, date, False)
   return False
+
+def rem_access_internal(update, rfid, weekday):
+  access_db = db['access']
+  access_db.delete(
+    RFID=rfid, 
+    weekday=weekday
+  )
+
+  msg = "*Acesso removido*\n"
+  msg += "RFID: {0}, Dia da semana: {1}\n".format(str(rfid), weekday)
+
+  update.message.reply_text(
+    msg,
+    parse_mode = ParseMode.MARKDOWN,
+    disable_web_page_preview=True
+  )
+
+@restricted
+def reset(bot, update):
+    access_db = db['access']
+    if len(access_db) == 0:
+      bot.send_message(chat_id=update.message.chat_id,
+                       text="Lista de acesso está vazia")
+    else:
+      auxiliar = list(access_db.all())
+
+      for access in auxiliar:
+        access_db.delete(RFID=access['RFID'], weekday=access['weekday'])
+
+      bot.send_message(chat_id=update.message.chat_id,
+                       text="Lista de acesso foi resetada")
+
+    log_db = db['log']
+    if len(log_db) == 0:
+        bot.send_message(chat_id=update.message.chat_id,
+                         text="Não há registros")
+    else:
+      auxiliar = list(log_db.all())
+
+      for log in auxiliar:
+        log_db.delete(RFID=log['RFID'], date_time=log['date_time'])
+
+      bot.send_message(chat_id=update.message.chat_id,
+                       text="Registros resetados")
 
 @restricted
 def add_access(bot, update, args):
@@ -191,6 +271,40 @@ def add_access_by_time_and_weekday(bot, update, args):
   access = Access(rfid, weekday, start_time, end_time)
   add_access_internal(update, access)
 
+@restricted
+def rem_access(bot, update, args):
+  if len(args) < 1:
+    update.effective_message.reply_text(
+      "Comando incorreto.\nUso: /rem_access <rfid>"
+    )
+    return
+
+  try:
+    rfid = int(args[0])
+  except ValueError:
+    update.effective_message.reply_text("RFID é para ser um número!")
+    return
+  
+  for weekday in WEEKDAYS:
+    rem_access_internal(update, rfid, weekday)
+
+@restricted
+def rem_access_by_weekday(bot, update, args):
+  if len(args) < 2:
+    update.effective_message.reply_text(
+      "Comando incorreto.\nUso: /rem_access_by_weekday <rfid> <weekday>"
+    )
+    return
+
+  try:
+    rfid = int(args[0])
+    weekday = args[1]
+  except ValueError:
+    update.effective_message.reply_text("RFID é para ser um número!")
+    return
+  
+  rem_access_internal(update, rfid, weekday)
+
 def get_access(bot, update, args):
   if len(args) < 1:
     update.effective_message.reply_text(
@@ -215,32 +329,20 @@ def unknown(bot, update):
     bot.send_message(chat_id=update.message.chat_id, 
                      text="Comando não reconhecido.")
 
-@restricted
-def reset(bot, update):
-    access_db = db['access']
-    if len(access_db) == 0:
-      bot.send_message(chat_id=update.message.chat_id,
-                       text="Lista de acesso está vazia")
-    else:
-      auxiliar = list(access_db.all())
-
-      for access in auxiliar:
-        access_db.delete(RFID=access['RFID'], weekday=access['weekday'])
-
-      bot.send_message(chat_id=update.message.chat_id,
-                      text="Lista de acesso foi resetada")
-
-#Add Handlers
+# Add Handlers
 dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(CommandHandler('access_list', access_list))
+dispatcher.add_handler(CommandHandler('show_logs', show_logs))
 dispatcher.add_handler(CommandHandler('add_access', add_access, pass_args=True))
 dispatcher.add_handler(CommandHandler('add_access_by_time', add_access_by_time, pass_args=True))
 dispatcher.add_handler(CommandHandler('add_access_by_weekday', add_access_by_weekday, pass_args=True))
 dispatcher.add_handler(CommandHandler('add_access_by_time_and_weekday', add_access_by_time_and_weekday, pass_args=True))
 dispatcher.add_handler(CommandHandler('get_access', get_access, pass_args=True))
+dispatcher.add_handler(CommandHandler('rem_access', rem_access, pass_args=True))
+dispatcher.add_handler(CommandHandler('rem_access_by_weekday', rem_access_by_weekday, pass_args=True))
 dispatcher.add_handler(CommandHandler('reset', reset))
 dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
-#Start bot
+# Start bot
 print("Bot rodando...")
 updater.start_polling()
