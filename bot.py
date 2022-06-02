@@ -133,6 +133,7 @@ def get_access_internal(rfid):
   access_infos = list(access_db.find(RFID=rfid, weekday=weekday))
 
   if len(access_infos) == 0:
+    log(rfid, date, False)
     return False 
 
   access_info = access_infos[0]
